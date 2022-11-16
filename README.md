@@ -29,23 +29,37 @@ The scripts are designed to be run using a Linux OS, and were developed on Ubunt
 conda activate qiime2-2022.8
 ``` 
 ### Import raw sequence data
+
+
+It is important to check what input-format we are going to use. In our case it is a FastQ with one file (forward and reverse are analyzed separately in this case). Files are splitted into one different folder for each sample an inside there will be the file. If that it is the case, we need to extract all files into a single folder before importing. 
+
+For forward files:
 ```
 
-It is important to check what input-format we are going to use. In our case it is a FastQ with two files one for forward and another for reverse sequence from each sample. This is usually splitted into one different folder for each sample an inside there will be both files. If that it is the case, we need to extract all files into a single folder before importing. 
+qiime tools import \
+  --type 'SampleData[SequencesWithQuality]' \
+  --input-path zoandietFfastq/ \
+  --input-format CasavaOneEightSingleLanePerSampleDirFmt \
+  --output-path demux-single-endF.qza
+  
+For reverse files:
 
 qiime tools import \
-  --type 'SampleData[PairedEndSequencesWithQuality]' \
-  --input-path zoandiets/ \
+  --type 'SampleData[SequencesWithQuality]' \
+  --input-path zoandietRfastq/ \
   --input-format CasavaOneEightSingleLanePerSampleDirFmt \
-  --output-path demux-paired-end.qza
+  --output-path demux-single-endR.qza
+  ```
 
 # paired-end-demux.qza is an artifact file '.qza' that has the information stored for your raw fastq sequences. We can summarize and visualize the output by transforming to '.qzv'. Check the output : https://view.qiime2.org/
 
+```
 qiime demux summarize \
-  --i-data demux-paired-end.qza \
-  --o-visualization demux-paired-end.qzv
+  --i-data demux-single-endF.qza \
+  --o-visualization demux-single-endF.qzv
 
-qiime tools view demux-paired-end.qzv
+qiime tools view demux-single-endF.qzv
+```
 
 ## Remove primers : cutadapt
 
@@ -54,19 +68,32 @@ We use [cutadapt](https://github.com/qiime2/q2-cutadapt) to remove the primers
 **Citation:** Marcel Martin. Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnet. journal, 17(1):pp–10, 2011. https://doi:10.14806/ej.17.1.200.
 
 ```
-qiime cutadapt trim-paired \
-  --i-demultiplexed-sequences demux-paired-end.qza \
-  --p-front-f GGWACWGGWTGAACWGTWTAYCCYCC \
-  --p-front-r TANACYTCNGGRTGNCCRAARAAYCA \
+qiime cutadapt trim-single \
+  --i-demultiplexed-sequences demux-single-endF.qza \
+  --p-front GGWACWGGWTGAACWGTWTAYCCYCC \
+  --p-front TANACYTCNGGRTGNCCRAARAAYCA \
   --p-error-rate 0 \
-  --o-trimmed-sequences trimmed-seqs.qza \
+  --o-trimmed-sequences trimmed-seqsF.qza \
   --verbose
   
 qiime demux summarize \
-  --i-data trimmed-seqs.qza \
-  --o-visualization trimmed-seqs.qzv
+  --i-data trimmed-seqsF.qza \
+  --o-visualization trimmed-seqsF.qzv
   
-qiime tools view trimmed-seqs.qzv
+qiime tools view trimmed-seqsR.qzv
+
+qiime cutadapt trim-single \
+  --i-demultiplexed-sequences demux-single-endR.qza \
+  --p-front TANACYTCNGGRTGNCCRAARAAYCA \
+  --p-error-rate 0 \
+  --o-trimmed-sequences trimmed-seqsR.qza \
+  --verbose
+  
+qiime demux summarize \
+  --i-data trimmed-seqsR.qza \
+  --o-visualization trimmed-seqsR.qzv
+  
+qiime tools view trimmed-seqsR.qzv
 ```
 ## Denoise, chimera removal and clustering into ASVs: DADA2
 
