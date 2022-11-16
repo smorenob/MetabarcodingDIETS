@@ -152,12 +152,62 @@ biom convert \
 -i ASVFtable/feature-table.biom \
 -o ASVFtable/ASV-frequency-table.tsv  --to-tsv
 ```
+##Taxonomic assignment
+ASVs passing the quality control and filtering thresholds (rep-seq-ASV.fasta) were taxonomically assigned using the MARES reference sequence database. (In this case it was MIDORI2)
 
-MIDORI2_UNIQ_NUC_GB251_CO1_BLAST.fasta
-MIDORI2_UNIQ_NUC_GB251_CO1_BLAST.fasta
+MARES is the most comprehensive CO1 reference database for marine eukaryotes available, and provides users the ability to retain taxa that cannot be assigned at the species level, but can be assigned at higher taxonomic levels.
 
+To use MARES reference database:
+
+Download MARES_NOBAR from https://osf.io/4f8mk/ Note : You can also use MARES_BAR.
+
+Place MARES_NOBAR_BOLD_NCBI_sl_reformatted.fasta in the main folder or include the file path after -db
+
+Build the database
+We first create a blast database from the MARES reference sequence database
+```
+makeblastdb -in MARES_NOBAR_BOLD_NCBI_sl_reformatted.fasta -dbtype nucl -parse_seqids
+```
 Blast each sequence against the MARES reference sequences database : Blastn
 Then, we performed a BLASTn against MARES reference database with an e-value of 1-60 for high-quality matches and with default max_target_seqs (500).
 ```
-blastn -db MIDORI2_UNIQ_NUC_GB251_CO1_BLAST.fasta -query rep-seq-ASVF.fasta -evalue 1e-60 -outfmt 5 -out MIDORIF_MEGAN.txt -num_threads 8
+blastn -db midori2/MIDORI2_UNIQ_NUC_GB251_CO1_BLAST.fasta -query rep-seq-ASVF.fasta/dna-sequences.fasta -evalue 1e-60 -outfmt 5 -out MIDORIF_MEGAN.txt -num_threads 8
 ```
+##Use LCA algorithm for taxonomic assignment : MEGAN6
+
+We used MEGAN 6.18.9 for taxonomic assignment within the NCBI taxonomy framework using the default Lowest Common Ancestor (LCA) algorithm parameters.
+
+**Citation** : Huson DH, Beier S, Flade I, Górska A, El-Hadidi M, et al. (2016) MEGAN Community Edition - Interactive Exploration and Analysis of Large-Scale Microbiome Sequencing Data. PLOS Computational Biology 12(6): e1004957. https://doi.org/10.1371/journal.pcbi.1004957
+
+Launch MEGAN 6.24.1
+
+File -> Import: the blast output and the fasta file used as the blast query into MEGAN (File → Import From BLAST) : MARES_MEGAN.txt and rep-seq-ASV.fasta
+
+Apply the following LCA settings (Options -> LCA settings):
+```
+min score 98 
+max expected 0.00000001 
+min % ID 75 
+top % 10 
+min support % 0 (off) 
+min support 1 
+```
+Select level of taxonomy to view, e.g. species, genus, family (Options -> Project assignment...). 
+
+File -> Export -> Text (csv) Format Choose: readName_to_taxonPathKPCOFGS
+
+- The .csv file will have a percent value at the end of the line. This refers to the percentage of high scoring alignments for the given read that map to the last taxon on the path. It has nothing to do with the percentage used in the weighted LCA.
+- It only reports taxa in the path that have an official KPCOFGS rank. Intermediate nodes that have no taxonomic rank, or one that does not belong to KPCOFGS, are suppressed KPCOFGS = Kingdom, Phylum, Class, Order, Family, Genus, Species
+- Each node is prefixed by a letter__ to indicate the rank, e.g. g__ for genus, s__ for species : we can edit this later to have only the name
+
+Save into the main folder as assigned_seqs-MARES-ex.txt
+
+**To create the OTU_taxonomy file to use in downstream analysis (see Statistical analysis):
+
+Export it as ReadName_to_taxonPathKPCOFGS / ASSIGNED
+Import it into excel and remove the columns with the percentage *No need in MEGAN6.21.10
+Because the unknowns create problems, the excel spreadsheet needs to be edited to replace them with the taxon known
+The ASVs not assigned have to be set as 'd_unassigned' because is not working otherwise
+Generate the names with a semicolon ; separation
+Create OTU_ID in the first column and the TaxonPath in the other one
+Save as .csv or .txt -> taxonomy_edited_8ranks.txt
