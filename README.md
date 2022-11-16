@@ -41,19 +41,17 @@ qiime tools import \
   --input-path zoandietFfastq/ \
   --input-format CasavaOneEightSingleLanePerSampleDirFmt \
   --output-path demux-single-endF.qza
-  
+```  
 For reverse files:
-
+```
 qiime tools import \
   --type 'SampleData[SequencesWithQuality]' \
   --input-path zoandietRfastq/ \
   --input-format CasavaOneEightSingleLanePerSampleDirFmt \
   --output-path demux-single-endR.qza
-  ```
 
 # paired-end-demux.qza is an artifact file '.qza' that has the information stored for your raw fastq sequences. We can summarize and visualize the output by transforming to '.qzv'. Check the output : https://view.qiime2.org/
 
-```
 qiime demux summarize \
   --i-data demux-single-endF.qza \
   --o-visualization demux-single-endF.qzv
@@ -71,7 +69,6 @@ We use [cutadapt](https://github.com/qiime2/q2-cutadapt) to remove the primers
 qiime cutadapt trim-single \
   --i-demultiplexed-sequences demux-single-endF.qza \
   --p-front GGWACWGGWTGAACWGTWTAYCCYCC \
-  --p-front TANACYTCNGGRTGNCCRAARAAYCA \
   --p-error-rate 0 \
   --o-trimmed-sequences trimmed-seqsF.qza \
   --verbose
@@ -101,38 +98,66 @@ qiime tools view trimmed-seqsR.qzv
 
 **Citation:** Callahan, B., McMurdie, P., Rosen, M. et al. DADA2: High-resolution sample inference from Illumina amplicon data. Nat Methods 13, 581–583 (2016). https://doi.org/10.1038/nmeth.3869
 
-We now merge the forward and reverse reads together to obtain the full denoised sequences. Merging is performed by aligning the denoised forward reads with the reverse-complement of the corresponding denoised reverse reads, and then constructing the merged “contig” sequences. By default, merged sequences are only output if the forward and reverse reads overlap by at least 12 bases, and are identical to each other in the overlap region (but these conditions can be changed via function arguments).
+We now merge the forward and reverse reads together to obtain the full denoised sequences. Merging is performed by aligning the denoised forward reads with the reverse-complement of the corresponding denoised reverse reads, and then constructing the merged “contig” sequences. By default, merged sequences are only output if the forward and reverse reads overlap by at least 12 bases, and are identical to each other in the overlap region (but these conditions can be changed via function arguments). (In this case this does not applie since we are working with Forward and Reverse separately)
 
 We can now construct an Amplicon Sequence Variant(ASV) table.
 
 ASVs are inferred by a *de novo* process in which biological sequences are discriminated from errors on the basis of, in part, the expectation that biological sequences are more likely to be repeatedly observed than are error-containing sequences. As a result, ASV inference cannot be performed independently on each read—the smallest unit of data from which ASVs can be inferred is a sample. However, unlike *de novo* OTUs, ASVs are consistent labels because ASVs represent a biological unit that exists outside of the data being analyzed. Thus, ASVs inferred independently from different studies or different samples can be validly compared.
 
 ```
-qiime dada2 denoise-paired \
-  --i-demultiplexed-seqs trimmed-seqs.qza \
-  --p-trim-left-f 13 \
-  --p-trim-left-r 13 \
-  --p-trunc-len-f 200 \
-  --p-trunc-len-r 200 \
-  --p-n-threads 4 \
-  –-p-chimera-method consensus \
-  --o-table table-dada2.qza \
-  --o-representative-sequences rep-seqs-dada2.qza \
-  --o-denoising-stats denoising-stats-dada2.qza
-  
+qiime dada2 denoise-single \
+--i-demultiplexed-seqs trimmed-seqsF.qza \
+--p-trunc-q 30 \
+--p-trunc-len 125 \
+--p-chimera-method consensus \
+--o-table table-dada2F.qza \
+--o-representative-sequences rep-seqs-dada2F.qza \
+--o-denoising-stats denoising-stats-dada2F.qza 
+
 qiime feature-table summarize \
---i-table table-dada2.qza \
---o-visualization table-dada2.qzv 
-qiime tools view table-dada2.qzv
+--i-table table-dada2F.qza \
+--o-visualization table-dada2F.qzv 
+
+qiime tools view table-dada2F.qzv
 
 qiime feature-table tabulate-seqs \
---i-data rep-seqs-dada2.qza \
---o-visualization rep-seqs-dada2.qzv \
-qiime tools view rep-seqs-dada2.qza
+--i-data rep-seqs-dada2F.qza \
+--o-visualization rep-seqs-dada2F.qzv 
+
+qiime tools view rep-seqs-dada2F.qzv
 
 # From this visualization we can download the FASTA FILE that we will use for taxonomic assignment (see Taxonomic assignment section)
 
 qiime metadata tabulate \
---m-input-file denoising-stats-dada2.qza \
---o-visualization denoising-stats-dada2.qzv
+--m-input-file denoising-stats-dada2F.qza \
+--o-visualization denoising-stats-dada2F.qzv
+
+qiime tools view denoising-stats-dada2F.qzv
+```
+## Export ASV table and representative sequences
+```
+# Example ASV table without filtering
+qiime tools export \
+--input-path table-dada2F.qza \
+--output-path ASVFtable/
+
+#Export representative sequences
+qiime tools export  \
+--input-path rep-seqs-dada2F.qza \
+--output-path rep-seq-ASVF.fasta
+```
+Convert the ASV table to tsv in Biom
+```
+biom convert \
+-i ASVFtable/feature-table.biom \
+-o ASVFtable/ASV-frequency-table.tsv  --to-tsv
+```
+
+MIDORI2_UNIQ_NUC_GB251_CO1_BLAST.fasta
+MIDORI2_UNIQ_NUC_GB251_CO1_BLAST.fasta
+
+Blast each sequence against the MARES reference sequences database : Blastn
+Then, we performed a BLASTn against MARES reference database with an e-value of 1-60 for high-quality matches and with default max_target_seqs (500).
+```
+blastn -db MIDORI2_UNIQ_NUC_GB251_CO1_BLAST.fasta -query rep-seq-ASVF.fasta -evalue 1e-60 -outfmt 5 -out MIDORIF_MEGAN.txt -num_threads 8
 ```
