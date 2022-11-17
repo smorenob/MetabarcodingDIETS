@@ -181,9 +181,9 @@ We used MEGAN 6.18.9 for taxonomic assignment within the NCBI taxonomy framework
 
 Launch MEGAN 6.24.1
 
-File -> Import: the blast output and the fasta file used as the blast query into MEGAN (File → Import From BLAST) : MARES_MEGAN.txt and rep-seq-ASV.fasta
+File -> Import: the blast output and the fasta file used as the blast query into MEGAN (**File → Import From BLAST**) : MARES_MEGAN.txt and rep-seq-ASV.fasta
 
-Apply the following LCA settings (Options -> LCA settings):
+Apply the following LCA settings (**Options -> LCA settings**):
 ```
 min score 98 
 max expected 0.00000001 
@@ -192,9 +192,9 @@ top % 10
 min support % 0 (off) 
 min support 1 
 ```
-Select level of taxonomy to view, e.g. species, genus, family (Options -> Project assignment...). 
+Select level of taxonomy to view, e.g. species, genus, family (**Options -> Project assignment...**). 
 
-File -> Export -> Text (csv) Format Choose: readName_to_taxonPathKPCOFGS
+**File -> Export -> Text (csv) Format Choose: readName_to_taxonPathKPCOFGS**
 
 - The .csv file will have a percent value at the end of the line. This refers to the percentage of high scoring alignments for the given read that map to the last taxon on the path. It has nothing to do with the percentage used in the weighted LCA.
 - It only reports taxa in the path that have an official KPCOFGS rank. Intermediate nodes that have no taxonomic rank, or one that does not belong to KPCOFGS, are suppressed KPCOFGS = Kingdom, Phylum, Class, Order, Family, Genus, Species
@@ -211,3 +211,89 @@ The ASVs not assigned have to be set as 'd_unassigned' because is not working ot
 Generate the names with a semicolon ; separation
 Create OTU_ID in the first column and the TaxonPath in the other one
 Save as .csv or .txt -> taxonomy_edited_8ranks.txt
+
+##Create ASV/OTU Phyloseq objects
+We then import the ASV table in R as phyloseq object with the taxonomy associated, sample metadata and reference sequences for statistical analysis.
+```
+library("phyloseq")
+library("readr")
+library("dplyr")
+library("Biostrings")
+
+# ASV table without filtering (change format from .tsv to .csv)
+
+ASV_table <- read.csv("ASVFtable/ASV-frequency-table.csv", row.names = 1, header = TRUE, check.names = FALSE)
+ASV_table <- otu_table(as.matrix(ASV_table), taxa_are_rows = TRUE)
+
+## Add the taxonomy assigned 
+
+tax_table_new_edited_8ranks <- read.csv("taxonomy_edited_8ranksF.csv")
+str(tax_table_new_edited_8ranks)
+
+matrix.please<-function(x) {
+  m<-as.matrix(x[,-1])
+  rownames(m)<-x[,1]
+  m
+}
+newtaxonomy <-matrix.please(tax_table_new_edited_8ranks)
+tax_table_newtaxonomy_8ranks <- tax_table(newtaxonomy)
+
+# Add the reference sequences
+
+reference_seqs0 <- readDNAStringSet(file = "rep-seq-ASVF.fasta/dna-sequences.fasta",format = "fasta", nrec = -1L, skip = 0L, seek.first.rec = FALSE, use.names = TRUE)
+
+** -- HASTA AQUI -- **
+
+# Add the sample data file 
+sample_data_96samples <- read.csv("Resources/sample_data_5X96samples.csv")
+sampledata = sample_data(data.frame(sample_data_96samples, row.names = sample_names(ASV_table)))
+
+# Create the phyloseq object 
+ASV <- phyloseq(otu_table(ASV_table), sample_data(sampledata), refseq(reference_seqs0), tax_table(tax_table_newtaxonomy_8ranks))
+```
+##Extract possible contaminants and tag switching normalisation
+We used decontam package in R to identify and extract contaminants using the DNA concentration of the samples and the negative controls.
+
+Citation: Davis NM, Proctor D, Holmes SP, Relman DA, Callahan BJ (2017). “Simple statistical identification and removal of contaminant sequences in marker-gene and metagenomics data.” bioRxiv, 221499. https://doi.org/10.1101/221499
+```
+library("phyloseq")
+library("decontam")
+
+#Remove Seawater control 
+ASV_nf.noSC <-  subset_samples(ASV, Sample != "SC")
+
+# Identify and extract blank contaminants using the negative controls. The frequency and prevalence probabilities are combined with Fisher's method and used to identify contaminants ###
+
+sample_data(ASV_nf.noSC)$is.neg <- sample_data(ASV_nf.noSC)$Sample_or_Control == "Control"
+contam.comb.all <- isContaminant(ASV_nf.noSC, method="combined", neg="is.neg", threshold=0.5, conc="Concentration")
+
+# Extract contaminants
+ASV_nf.noSC.nocon <- prune_taxa(!contam.comb.all$contaminant, ASV_nf.noSC)
+
+# Extract negative control samples 
+ASV_nf.noSC.nocon.nc <- subset_samples(ASV_nf.noSC.nocon, Sample_or_Control=="True Sample")
+
+write.csv(otu_table(ASV_nf.noSC.nocon.nc),file = "ASVtable_nf_nosc_noc_nocon.csv")
+```
+Tag switching correction. We used the R Script included in Resources/owi_renormalize.R(https://github.com/vanearranz/Metabarcoding_CO1_kelpholdfast/blob/main/Resources/owi_renormalise.R). This sorts the samples by abundance for each ASV and eliminates the reads of the samples corresponding to a cumulative frequency of less than 3% for each particular ASV.
+
+Citation: Wangensteen OS, Turon X (2016) Metabarcoding techniques for assessing biodiversity of marine animal forests. Marine Animal Forests. The Ecology of Benthic Biodiversity Hotspots, eds Rossi S, Bramanti L, Gori A, Orejas C (Springer International Publishing).
+```
+RScript Resources/owi_renormalize.R -i ASVtable_nf_nosc_noc_nocon.tsv -o ASVtable_tsc.tsv -c 0.97 -s 2 -e 88
+```
+Rename samples names from . to - in the output table ASVtable_tsc.tsv. In R :
+```
+#After tag switching normalization
+ASVtable_tsc_all <- read.delim("Resources/ASVtable_tsc.tsv",sep = "\t", header=TRUE,as.is=TRUE, row.names = 1, check.names = FALSE)
+str(ASVtable_tsc_all)
+# delete the last 3 columns of total counts 
+ASVtable_tsc_all <- ASVtable_tsc_all[-c(88:90)]
+str(ASVtable_tsc_all)
+# Remove rows that sum columns are 0
+ASVtable_tsc_all <- ASVtable_tsc_all[as.logical(rowSums(ASVtable_tsc != 0)), ]
+str(ASVtable_tsc_all)
+
+ASV_nofilter <- otu_table(ASVtable_tsc_all, taxa_are_rows = TRUE)
+
+ASV_nofilter <- phyloseq(otu_table(ASV_nofilter), sample_data(ASV_nf.noSC.nocon.nc), refseq(ASV_nf.noSC.nocon.nc), tax_table(ASV_nf.noSC.nocon.nc))
+```
