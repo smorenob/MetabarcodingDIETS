@@ -238,11 +238,13 @@ matrix.please<-function(x) {
 newtaxonomy <-matrix.please(tax_table_new_edited_8ranks)
 tax_table_newtaxonomy_8ranks <- tax_table(newtaxonomy)
 
+# Add the sample data file 
+sample_data_96samples <- read.csv("Resources/sample_data_5X96samples.csv")
+sampledata = sample_data(data.frame(sample_data_96samples, row.names = sample_names(ASV_table)))
+
 # Add the reference sequences
 
 reference_seqs0 <- readDNAStringSet(file = "rep-seq-ASVF.fasta/dna-sequences.fasta",format = "fasta", nrec = -1L, skip = 0L, seek.first.rec = FALSE, use.names = TRUE)
-
-** -- HASTA AQUI -- **
 
 # Add the sample data file 
 sample_data_96samples <- read.csv("Resources/sample_data_5X96samples.csv")
@@ -259,19 +261,22 @@ Citation: Davis NM, Proctor D, Holmes SP, Relman DA, Callahan BJ (2017). “Simp
 library("phyloseq")
 library("decontam")
 
-#Remove Seawater control 
-ASV_nf.noSC <-  subset_samples(ASV, Sample != "SC")
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("decontam")
 
 # Identify and extract blank contaminants using the negative controls. The frequency and prevalence probabilities are combined with Fisher's method and used to identify contaminants ###
 
-sample_data(ASV_nf.noSC)$is.neg <- sample_data(ASV_nf.noSC)$Sample_or_Control == "Control"
-contam.comb.all <- isContaminant(ASV_nf.noSC, method="combined", neg="is.neg", threshold=0.5, conc="Concentration")
+sample_data(ASV)$is.neg <- sample_data(ASV)$Sample_or_Control == "Control"
+contam.prev <- isContaminant(ASV, method="prevalence", neg="is.neg",  threshold=0.5)
+table(contam.prev$contaminant)
 
 # Extract contaminants
-ASV_nf.noSC.nocon <- prune_taxa(!contam.comb.all$contaminant, ASV_nf.noSC)
+ASV.nocon <- prune_taxa(!contam.prev$contaminant, ASV)
 
 # Extract negative control samples 
-ASV_nf.noSC.nocon.nc <- subset_samples(ASV_nf.noSC.nocon, Sample_or_Control=="True Sample")
+ASV.nocon.nc <- subset_samples(ASV.nocon, Sample_or_Control=="True Sample")
 
 write.csv(otu_table(ASV_nf.noSC.nocon.nc),file = "ASVtable_nf_nosc_noc_nocon.csv")
 ```
@@ -279,21 +284,72 @@ Tag switching correction. We used the R Script included in Resources/owi_renorma
 
 Citation: Wangensteen OS, Turon X (2016) Metabarcoding techniques for assessing biodiversity of marine animal forests. Marine Animal Forests. The Ecology of Benthic Biodiversity Hotspots, eds Rossi S, Bramanti L, Gori A, Orejas C (Springer International Publishing).
 ```
-RScript Resources/owi_renormalize.R -i ASVtable_nf_nosc_noc_nocon.tsv -o ASVtable_tsc.tsv -c 0.97 -s 2 -e 88
+# In terminal (install package "optparse" in R):
+
+RScript owi_renormalize.R -i ASVtable_nocon.csv -o ASVtable_tsc.csv -c 0.97 -s 2 -e 321
 ```
 Rename samples names from . to - in the output table ASVtable_tsc.tsv. In R :
 ```
 #After tag switching normalization
-ASVtable_tsc_all <- read.delim("Resources/ASVtable_tsc.tsv",sep = "\t", header=TRUE,as.is=TRUE, row.names = 1, check.names = FALSE)
+ASVtable_tsc_all <- read.csv("Resources/ASVtable_tsc.csv",sep = "\t", header=TRUE,as.is=TRUE, row.names = 1, check.names = FALSE)
 str(ASVtable_tsc_all)
 # delete the last 3 columns of total counts 
-ASVtable_tsc_all <- ASVtable_tsc_all[-c(88:90)]
+ASVtable_tsc_all <- ASVtable_tsc_all[-c(321:323)]
 str(ASVtable_tsc_all)
 # Remove rows that sum columns are 0
-ASVtable_tsc_all <- ASVtable_tsc_all[as.logical(rowSums(ASVtable_tsc != 0)), ]
+ASVtable_tsc_all <- ASVtable_tsc_all[as.logical(rowSums(ASVtable_tsc_all != 0)), ]
 str(ASVtable_tsc_all)
 
 ASV_nofilter <- otu_table(ASVtable_tsc_all, taxa_are_rows = TRUE)
 
-ASV_nofilter <- phyloseq(otu_table(ASV_nofilter), sample_data(ASV_nf.noSC.nocon.nc), refseq(ASV_nf.noSC.nocon.nc), tax_table(ASV_nf.noSC.nocon.nc))
+ASV_nofilter <- phyloseq(otu_table(ASV_nofilter), sample_data(ASV.nocon.nc), refseq(ASV.nocon.nc), tax_table(ASV.nocon.nc))
+```
+
+##Clustering ASVs into OTUs : VSEARCH
+We used Vsearch to cluster the ASVs into Operational Taxonomic Units (OTUs). We chose 97% of similarity for CO1 mitochondrial region.
+
+Citation: Rognes T, Flouri T, Nichols B, Quince C, Mahé F. (2016) VSEARCH: a versatile open source tool for metagenomics. PeerJ 4:e2584. https://doi.org/10.7717/peerj.2584
+```
+vsearch --cluster_size rep-sequences-nofilt.fasta  --id 0.97 --uc clustering-results.uc -msaout sequences-outs
+
+qiime vsearch cluster-features-de-novo \
+  --i-table table.qza \
+  --i-sequences rep-seqs.qza \
+  --p-perc-identity 0.99 \
+  --o-clustered-table table-dn-99.qza \
+  --o-clustered-sequences rep-seqs-dn-99.qza
+```
+Save the clustering results.uc as .csv
+
+Manually deleting the Cluster records rows "C", because they are the same as the cluster centroids "S" -> clustering-results.csv
+
+Change the header names to ASV_ID to merge in R with the previous taxonomy assigned to ASVs.
+
+By running the following script in R, we created the OTU table by combining the previous ASV table and Vsearch clustering results using the ASV_ID as an indicator.
+```
+clustering.results <- read.csv("Resources/clustering-results.csv")
+ASV_OTU_table <- merge(ASVtable_tsc_all_clean, clustering.results, by.x="ASV_ID", by.y="ASV_ID")
+write.csv(ASV_OTU_table, file = "ASV_OTU_table.csv")
+```
+Manually edited again the ASV_OTU_table.csv to create the ASV_OTU_tabletocollapse.csv
+
+Sort by Record type column : copy all the ASV_ID column of the centroids "S" into the OTU column (they are the consensus of the clusters)
+Sort by Cluster number
+Delete all the columns from Vsearch output + taxonomy and ASV_ID columns
+```
+OTU_nofilter_tocollapse <-  read.csv("Resources/ASV_OTU_tabletocollapse.csv", check.names = FALSE)
+OTU_nofilter_tocollapse$OUT97_ID <- as.factor(OTU_nofilter_tocollapse$OUT97_ID)
+#Collapse the OTUs with the same name (all ASVs that were collapse into OTUs)
+OTU_nofilter_collapsed <- OTU_nofilter_tocollapse %>% group_by(OUT97_ID) %>% summarise_all(funs(sum))
+
+OTU_nofilter_collapsed$OUT97_ID <- as.character(OTU_nofilter_collapsed$OUT97_ID)
+OTU_nofilter_collapsed <- as.data.frame(OTU_nofilter_collapsed)
+rownames(OTU_nofilter_collapsed) <- OTU_nofilter_collapsed[,1]
+OTUtable_tsc <- OTU_nofilter_collapsed[,-1]
+
+
+# Create Phyloseq object with OTU table after tag switching normalisation 
+
+OTU_nofilter <- otu_table(OTUtable_tsc, taxa_are_rows = TRUE)
+OTU_nofilter <- phyloseq(otu_table(OTU_nofilter), sample_data(sampledata00), refseq(reference_seqs0), tax_table(tax_table_newtaxonomy_8ranks))
 ```
