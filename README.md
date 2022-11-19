@@ -310,14 +310,41 @@ We used Vsearch to cluster the ASVs into Operational Taxonomic Units (OTUs). We 
 
 Citation: Rognes T, Flouri T, Nichols B, Quince C, Mahé F. (2016) VSEARCH: a versatile open source tool for metagenomics. PeerJ 4:e2584. https://doi.org/10.7717/peerj.2584
 ```
-vsearch --cluster_size rep-sequences-nofilt.fasta  --id 0.97 --uc clustering-results.uc -msaout sequences-outs
-
 qiime vsearch cluster-features-de-novo \
-  --i-table table.qza \
-  --i-sequences rep-seqs.qza \
-  --p-perc-identity 0.99 \
-  --o-clustered-table table-dn-99.qza \
-  --o-clustered-sequences rep-seqs-dn-99.qza
+  --i-table table-dada2F.qza \
+  --i-sequences rep-seqs-dada2F.qza \
+  --p-perc-identity 0.97 \
+  --o-clustered-table table-dada2F-97.qza \
+  --o-clustered-sequences rep-seqs-dada2F-97.qza
+  
+  qiime feature-table summarize \
+--i-table table-dada2F-97.qza \
+--o-visualization table-dada2F-97.qzv 
+
+qiime tools view table-dada2F-97.qzv
+
+qiime feature-table tabulate-seqs \
+--i-data rep-seqs-dada2F-97.qza \
+--o-visualization rep-seqs-dada2F-97.qzv
+
+qiime tools view rep-seqs-dada2F-97.qzv
+
+Export OTUtable:
+
+qiime tools export \
+--input-path table-dada2F-97.qza \
+--output-path OTUFtable/
+
+#Export representative sequences
+qiime tools export  \
+--input-path rep-seqs-dada2F-97.qza \
+--output-path rep-seq-OTUF.fasta
+
+biom convert \
+-i OTUFtable/feature-table.biom \
+-o OTUFtable/OTU-frequency-table.tsv  --to-tsv
+
+blastn -db midori2/MIDORI2_UNIQ_NUC_GB251_CO1_BLAST.fasta -query rep-seq-OTUF.fasta/dna-sequences.fasta -evalue 1e-60 -outfmt 5 -out MIDORIOTUF_MEGAN.txt -num_threads 8
 ```
 Save the clustering results.uc as .csv
 
