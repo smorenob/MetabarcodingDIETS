@@ -69,7 +69,7 @@ We use [cutadapt](https://github.com/qiime2/q2-cutadapt) to remove the primers
 qiime cutadapt trim-single \
   --i-demultiplexed-sequences demux-single-endF.qza \
   --p-front GGWACWGGWTGAACWGTWTAYCCYCC \
-  --p-error-rate 0 \
+  --p-error-rate 0.01 \
   --o-trimmed-sequences trimmed-seqsF.qza \
   --verbose
   
@@ -82,7 +82,7 @@ qiime tools view trimmed-seqsR.qzv
 qiime cutadapt trim-single \
   --i-demultiplexed-sequences demux-single-endR.qza \
   --p-front TANACYTCNGGRTGNCCRAARAAYCA \
-  --p-error-rate 0 \
+  --p-error-rate 0.01 \
   --o-trimmed-sequences trimmed-seqsR.qza \
   --verbose
   
