@@ -171,7 +171,7 @@ makeblastdb -in MARES_NOBAR_BOLD_NCBI_sl_reformatted.fasta -dbtype nucl -parse_s
 Blast each sequence against the MARES reference sequences database : Blastn
 Then, we performed a BLASTn against MARES reference database with an e-value of 1-60 for high-quality matches and with default max_target_seqs (500).
 ```
-blastn -db midori2/MIDORI2_UNIQ_NUC_GB251_CO1_BLAST.fasta -query rep-seq-ASVF.fasta/dna-sequences.fasta -evalue 1e-30 -outfmt 5 -out MIDORIF_MEGAN.txt -num_threads 8
+blastn -db midori2/MIDORI2_UNIQ_NUC_GB251_CO1_BLAST.fasta -query rep-seq-ASVF.fasta/dna-sequences.fasta -evalue 1e-10 -outfmt 5 -out MIDORIF10_MEGAN.txt -num_threads 8
 ```
 ##Use LCA algorithm for taxonomic assignment : MEGAN6
 
@@ -243,8 +243,8 @@ tax_table_newtaxonomy_8ranks <- tax_table(newtaxonomy)
 reference_seqs0 <- readDNAStringSet(file = "rep-seq-ASVF.fasta/dna-sequences.fasta",format = "fasta", nrec = -1L, skip = 0L, seek.first.rec = FALSE, use.names = TRUE)
 
 # Add the sample data file 
-sample_data_96samples <- read.csv("sample_data.csv")
-sampledata = sample_data(data.frame(sample_data_96samples, row.names = sample_names(ASV_table)))
+sample_data <- read.csv("sample_data.csv")
+sampledata = sample_data(data.frame(sample_data, row.names = sample_names(ASV_table)))
 
 # Create the phyloseq object 
 ASV <- phyloseq(otu_table(ASV_table), sample_data(sampledata), refseq(reference_seqs0), tax_table(tax_table_newtaxonomy_8ranks))
@@ -329,19 +329,19 @@ By running the following script in R, we created the OTU table by combining the 
 ASVtable_tsc_all <- read.csv("ASVtable_tsc_all.csv")
 
 clustering.results <- read.csv("clustering-resultsF.csv")
-ASV_OTU_table <- merge(ASVtable_nocon, clustering.results, by.x="ASV_ID", by.y="ASV_ID")
+ASV_OTU_table <- merge(ASVtable_tsc_all, clustering.results, by.x="ASV_ID", by.y="ASV_ID")
 write.csv(ASV_OTU_table, file = "ASV_OTU_tableF.csv")
 ```
-Manually edited again the ASV_OTU_table.csv to create the ASV_OTU_tabletocollapse.csv
+Manually edited again the ASV_OTU_table.csv to create the ASV_OTU_tableFtocollapse.csv
 
 Sort by Record type column : copy all the ASV_ID column of the centroids "S" into the OTU column (they are the consensus of the clusters)
 Sort by Cluster number
 Delete all the columns from Vsearch output + taxonomy and ASV_ID columns
 ```
-OTU_nofilter_tocollapse <-  read.csv("ASV_OTU_tableFcollapse.csv", check.names = FALSE)
-OTU_nofilter_tocollapse$OUT97_ID <- as.factor(OTU_nofilter_tocollapse$OTU97_ID)
+OTU_nofilter_tocollapse <-  read.csv("ASV_OTU_tableFtocollapse.csv", check.names = FALSE)
+OTU_nofilter_tocollapse$OUT97_ID <- as.factor(OTU_nofilter_tocollapse$OUT97_ID)
 #Collapse the OTUs with the same name (all ASVs that were collapse into OTUs)
-OTU_nofilter_collapsed <- OTU_nofilter_tocollapse %>% group_by(OTU97_ID) %>% summarise_all(funs(sum()))
+OTU_nofilter_collapsed <- OTU_nofilter_tocollapse %>% group_by(OUT97_ID) %>% summarise_all(funs(sum()))
 
 
 OTU_nofilter_collapsed$OUT97_ID <- as.character(OTU_nofilter_collapsed$OUT97_ID)
@@ -400,16 +400,16 @@ Back in R
 
 matchlistASV <- read.table("Resources/match_list-ASVF.txt", header=FALSE,as.is=TRUE, stringsAsFactors=FALSE)
 
-matchlistOTU <- read.table("Resources/match_list-OTUF.txt", header=FALSE,as.is=TRUE, stringsAsFactors=FALSE)
+matchlistOTU <- read.table("match_list-OTUF.txt", header=FALSE,as.is=TRUE, stringsAsFactors=FALSE)
 
 ### Run LULU to obtained the ASV/OTU table
-lulu_curated_result_ASV_tsc <-lulu(ASVtable_tsc_all, matchlistASV)
+lulu_curated_result_OTU_tsc <-lulu(OTUtable_tsc, matchlistOTU)
 
 # Create a Phyloseq object with the new OTU table with LULU 
-ASVtable_lulu <- as.matrix(lulu_curated_result_ASV_tsc$curated_table)
+OTUtable_lulu <- as.matrix(lulu_curated_result_OTU_tsc$curated_table)
 
-ASV_lulu <- otu_table(ASVtable_lulu, taxa_are_rows = TRUE)
-ASV_lulu <- phyloseq(otu_table(ASV_lulu), sample_data(ASV_nofilter), refseq(ASV_nofilter), tax_table(ASV_nofilter))
+OTU_lulu <- otu_table(OTUtable_lulu, taxa_are_rows = TRUE)
+OTU_lulu <- phyloseq(otu_table(OTU_lulu), sample_data(OTU_nofilter), refseq(OTU_nofilter), tax_table(OTU_nofilter))
 ```
 ##Minimum read abundance
 
