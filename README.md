@@ -98,7 +98,7 @@ qiime tools view trimmed-seqsR.qzv
 
 **Citation:** Callahan, B., McMurdie, P., Rosen, M. et al. DADA2: High-resolution sample inference from Illumina amplicon data. Nat Methods 13, 581–583 (2016). https://doi.org/10.1038/nmeth.3869
 
-We now merge the forward and reverse reads together to obtain the full denoised sequences. Merging is performed by aligning the denoised forward reads with the reverse-complement of the corresponding denoised reverse reads, and then constructing the merged “contig” sequences. By default, merged sequences are only output if the forward and reverse reads overlap by at least 12 bases, and are identical to each other in the overlap region (but these conditions can be changed via function arguments). (In this case this does not applie since we are working with Forward and Reverse separately)
+We now merge the forward and reverse reads together to obtain the full denoised sequences. Merging is performed by aligning the denoised forward reads with the reverse-complement of the corresponding denoised reverse reads, and then constructing the merged “contig” sequences. By default, merged sequences are only output if the forward and reverse reads overlap by at least 12 bases, and are identical to each other in the overlap region (but these conditions can be changed via function arguments). (In this case this does not apply since we are working with Forward and Reverse separately)
 
 We can now construct an Amplicon Sequence Variant(ASV) table.
 
@@ -238,10 +238,6 @@ matrix.please<-function(x) {
 newtaxonomy <-matrix.please(tax_table_new_edited_8ranks)
 tax_table_newtaxonomy_8ranks <- tax_table(newtaxonomy)
 
-# Add the sample data file 
-sample_data_96samples <- read.csv("Resources/sample_data_5X96samples.csv")
-sampledata = sample_data(data.frame(sample_data_96samples, row.names = sample_names(ASV_table)))
-
 # Add the reference sequences
 
 reference_seqs0 <- readDNAStringSet(file = "rep-seq-ASVF.fasta/dna-sequences.fasta",format = "fasta", nrec = -1L, skip = 0L, seek.first.rec = FALSE, use.names = TRUE)
@@ -299,6 +295,7 @@ str(ASVtable_tsc_all)
 # Remove rows that sum columns are 0
 ASVtable_tsc_all <- ASVtable_tsc_all[as.logical(rowSums(ASVtable_tsc_all != 0)), ]
 str(ASVtable_tsc_all)
+write.csv(otu_table(ASVtable_tsc_all),file = "ASVtable_tsc_all.csv")
 
 ASV_nofilter <- otu_table(ASVtable_tsc_all, taxa_are_rows = TRUE)
 
@@ -329,7 +326,7 @@ Change the header names to ASV_ID to merge in R with the previous taxonomy assig
 
 By running the following script in R, we created the OTU table by combining the previous ASV table and Vsearch clustering results using the ASV_ID as an indicator.
 ```
-ASVtable_nocon <- read.csv("ASVtable_nocon.csv")
+ASVtable_tsc_all <- read.csv("ASVtable_tsc_all.csv")
 
 clustering.results <- read.csv("clustering-resultsF.csv")
 ASV_OTU_table <- merge(ASVtable_nocon, clustering.results, by.x="ASV_ID", by.y="ASV_ID")
