@@ -1,6 +1,6 @@
 # MetabarcodingDIETS
  
-This workflow is specific to analysing eukaryote diversity from community DNA metabarcoding of gut contents from different species at zoantharian dominated habitats using CO1 gene region from raw reads. It reproduces the cleaning and curation steps as well as the biostatiscal analysis included in the manuscript "Metabarcoding hyperdiverse kelp holdfast communities on temperate reefs: an experimental approach to inform future studies." by Vanessa Arranz, Libby Liggins and J. David Aguirre.  
+This workflow is specific to analysing eukaryote diversity from community DNA metabarcoding of gut contents from different species at zoantharian dominated habitats using CO1 gene region from raw reads. It reproduces the cleaning and curation steps as well as the biostatiscal analysis included in the project "Trophic interactions on zoantharian zones in the Canary Islands" by Moreno-Borges et al. 2022.  
 
 Sample preparation, DNA extraction and PCR amplification steps related to this work can be found here (add link).
 
@@ -13,7 +13,7 @@ The scripts are designed to be run using a Linux OS, and were developed on Ubunt
 - Raw sequence data : All FASTQ sequence files are available from the National Center for Biotechnology Information short-read archive database (Bioproject: PRJNA638997, Biosamples: SAMN15220525-SAMN15220620).
 - QIIME2 version 2022.8 https://docs.qiime2.org/2020.8/install/ 
 - Biom http://biom-format.org/
-- MARES reference sequences database : https://osf.io/4f8mk/ 
+- MIDORI Reference 2 sequences database : http://www.reference-midori.info/
 - BLASTn  https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download
 - MEGAN6 -  Metagenome Analyzer https://www.wsi.uni-tuebingen.de/lehrstuehle/algorithms-in-bioinformatics/software/megan6/
 - VSEARCH https://github.com/torognes/vsearch
@@ -136,7 +136,7 @@ qiime tools view denoising-stats-dada2F.qzv
 ```
 ## Export ASV table and representative sequences
 ```
-# Example ASV table without filtering
+# Export ASV table without filtering
 qiime tools export \
 --input-path table-dada2F.qza \
 --output-path ASVFtable/
@@ -220,7 +220,7 @@ library("readr")
 library("dplyr")
 library("Biostrings")
 
-# ASV table without filtering (change format from .tsv to .csv)
+# ASV table without filtering, change format from .tsv to .csv and remove first row with table title.
 
 ASV_table <- read.csv("ASVFtable/ASV-frequency-table.csv", row.names = 1, header = TRUE, check.names = FALSE)
 ASV_table <- otu_table(as.matrix(ASV_table), taxa_are_rows = TRUE)
@@ -284,7 +284,7 @@ Citation: Wangensteen OS, Turon X (2016) Metabarcoding techniques for assessing 
 
 RScript owi_renormalize.R -i ASVtable_nocon.csv -o ASVtable_tsc.csv -c 0.97 -s 2 -e 321
 ```
-Rename samples names from . to - in the output table ASVtable_tsc.tsv. In R :
+Rename samples names from . to - in the output table ASVtable_tsc.tsv (no fue necesario). In R :
 ```
 #After tag switching normalization
 ASVtable_tsc_all <- read.csv("Resources/ASVtable_tsc.csv",sep = "\t", header=TRUE,as.is=TRUE, row.names = 1, check.names = FALSE)
@@ -382,7 +382,7 @@ OTUtable_tsc
 write.csv(refseq(ASV.nocon.nc), file = "ref_seqs_ASVF.csv")
 write.csv(refseq(OTU_nofilter), file = "ref_seqs_OTUF.csv")
 
-# Convert csv to fasta in a website - rep_sequences-ASV.fasta
+# Convert csv to fasta in a website - rep_sequences-ASV.fasta (https://cdcgov.github.io/CSV2FASTA/)
 ```
 In the TERMINAL with BLASTN: produce a blast database with the ASV/OTUs reference sequences (example here only with ASVs)
 ```
