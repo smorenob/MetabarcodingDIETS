@@ -1,6 +1,6 @@
 # MetabarcodingDIETS
  
-This workflow is specific to analysing eukaryote diversity from community DNA metabarcoding of gut contents from different species at zoantharian dominated habitats using CO1 gene region from raw reads. It reproduces the cleaning and curation steps as well as the biostatiscal analysis included in the project "Trophic interactions on zoantharian zones in the Canary Islands" by Moreno-Borges et al. 2022.  
+This workflow is specific to analysing eukaryote diversity from community DNA metabarcoding of gut contents from different species at zoantharian dominated habitats using CO1 gene region from raw reads. It reproduces the cleaning and curation steps as well as the biostatiscal analysis included in the project "Trophic interactions  in habitats dominated by zoantharians in subtropical regions" by Moreno-Borges et al. 2023.  
 
 Sample preparation, DNA extraction and PCR amplification steps related to this work can be found here (add link).
 
@@ -10,7 +10,7 @@ The scripts are designed to be run using a Linux OS, and were developed on Ubunt
 ## Requirements : 
 
 - The contents of this repository
-- Raw sequence data : All FASTQ sequence files are available from the National Center for Biotechnology Information short-read archive database (Bioproject: PRJNA638997, Biosamples: SAMN15220525-SAMN15220620).
+- Raw sequence data : FASTQ sequence files available in this repository.
 - QIIME2 version 2022.8 https://docs.qiime2.org/2020.8/install/ 
 - Biom http://biom-format.org/
 - MIDORI Reference 2 sequences database : http://www.reference-midori.info/
@@ -411,60 +411,5 @@ OTUtable_lulu <- as.matrix(lulu_curated_result_OTU_tsc$curated_table)
 OTU_lulu <- otu_table(OTUtable_lulu, taxa_are_rows = TRUE)
 OTU_lulu <- phyloseq(otu_table(OTU_lulu), sample_data(OTU_nofilter), refseq(OTU_nofilter), tax_table(OTU_nofilter))
 ```
-##Minimum read abundance
 
-One of the most broadly employed strategies to remove artefactual sequences is to discard sequences with copy numbers under a certain threshold. We used 3 different minimum read abundance thresholds across all samples to remove low abundance features of less than 0.003%, 0.01% and 0.05% of the total read abundance across all samples.
-```
-#### 0.003% minimum read abundance 
-
-x = taxa_sums(ASV_nofilter)
-keepTaxa_f1 = taxa_names(ASV_nofilter)[which((x / sum(x)) > 0.00003)]
-ASV_f1 = prune_taxa(keepTaxa_f1, ASV_nofilter)
-ASV_f1
-
-y = taxa_sums(OTU_nofilter)
-keepOTUTaxa_f1 = taxa_names(OTU_nofilter)[which((y / sum(y)) > 0.00003)]
-OTU_f1 = prune_taxa(keepOTUTaxa_f1, OTU_nofilter)
-OTU_f1
-
-#### 0.01 % minimum read abundance 
-
-keepTaxa_f2 = taxa_names(ASV_nofilter)[which((x / sum(x)) > 0.0001)]
-ASV_f2 = prune_taxa(keepTaxa_f2, ASV_nofilter)
-ASV_f2
-
-keepOTUTaxa_f2 = taxa_names(OTU_nofilter)[which((y / sum(y)) > 0.0001)]
-OTU_f2 = prune_taxa(keepOTUTaxa_f2, OTU_nofilter)
-OTU_f2
-
-#### 0.05% minimum read abundance 
-
-keepTaxa_f3 = taxa_names(ASV_nofilter)[which((x / sum(x)) > 0.0005)]
-ASV_f3 = prune_taxa(keepTaxa_f3, ASV_nofilter)
-ASV_f3
-
-keepOTUTaxa_f3 = taxa_names(OTU_nofilter)[which((y / sum(y)) > 0.0005)]
-OTU_f3 = prune_taxa(keepOTUTaxa_f3, OTU_nofilter)
-OTU_f3
-```
-##Statistical analysis
-We created 5 different ASV tables and 5 OTU tables by applying different strategies to remove possible contaminants.
-
-NO filtering : ASVnf/OTUnf
-LULU filtering : ASVlulu/OTUlulu
-0.003% Minimum read abundance : ASVf1/OTUf1
-0.01% Minimum read abundance : AVf2/OTUf2
-0.05% Minimum read abundance : ASVf3/OTUf3
-The Phyloseq objects of these tables and additional files are included in Resources/Edesign_github.Rdata file ready to perform the following analytical steps using the R Scripts provided.
-
-Results : Use 1.Edesign_functions_results.R Script
-
-We used linear models implemented in R v4.0.1 (R Core Team, 2020) to assess how our laboratory and bioinformatic decisions influenced biodiversity estimates for the holdfast communities.
-
-The results outputs are included in Resources/Edesign_results.Rdata
-
-Figure 2 and Supporting Material - Figure A2 : Use 2.Recording_results3.R script
-
-Figures 3 and 4 : Use 3.Figures_scripts_ASVF1.R
-
-Comparison with Morphological based surveys - Figure 5 and 6 : Use 4.MorphologyvsMetabarcoding.R
+This workflow was based on the repository "Metabarcoding_CO1_kelpholdfast" included in the manuscript "Metabarcoding hyperdiverse kelp holdfast communities on temperate reefs: an experimental approach to inform future studies." by Vanessa Arranz, Libby Liggins and J. David Aguirre. 
