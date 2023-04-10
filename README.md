@@ -19,6 +19,9 @@ The scripts are designed to be run using a Linux OS, and were developed on Ubunt
 - VSEARCH https://github.com/torognes/vsearch
 - R https://www.r-project.org/
 
+
+This workflow was based on the repository "Metabarcoding_CO1_kelpholdfast" included in the manuscript "Metabarcoding hyperdiverse kelp holdfast communities on temperate reefs: an experimental approach to inform future studies." by Vanessa Arranz, Libby Liggins and J. David Aguirre. 
+
 ## Getting started
 
 ### Activate QIIME2 
@@ -410,6 +413,4 @@ OTUtable_lulu <- as.matrix(lulu_curated_result_OTU_tsc$curated_table)
 
 OTU_lulu <- otu_table(OTUtable_lulu, taxa_are_rows = TRUE)
 OTU_lulu <- phyloseq(otu_table(OTU_lulu), sample_data(OTU_nofilter), refseq(OTU_nofilter), tax_table(OTU_nofilter))
-```
 
-This workflow was based on the repository "Metabarcoding_CO1_kelpholdfast" included in the manuscript "Metabarcoding hyperdiverse kelp holdfast communities on temperate reefs: an experimental approach to inform future studies." by Vanessa Arranz, Libby Liggins and J. David Aguirre. 
