@@ -34,7 +34,7 @@ conda activate qiime2-2022.8
 ### Import raw sequence data
 
 
-It is important to check what input-format we are going to use. In our case it is a FastQ with one file (forward and reverse are analyzed separately in this case). Files are splitted into one different folder for each sample an inside there will be the file. If that it is the case, we need to extract all files into a single folder before importing. 
+It is important to check what input-format we are going to use. In our case it is a FastQ with one file (forward and reverse were analyzed separately since they could not be merged because this study was based on shorter sequences of this COI region). Files are splitted into one different folder for each sample an inside there will be the file. If that it is the case, we need to extract all files into a single folder before importing. 
 
 For forward files:
 ```
@@ -101,7 +101,7 @@ qiime tools view trimmed-seqsR.qzv
 
 **Citation:** Callahan, B., McMurdie, P., Rosen, M. et al. DADA2: High-resolution sample inference from Illumina amplicon data. Nat Methods 13, 581–583 (2016). https://doi.org/10.1038/nmeth.3869
 
-We now merge the forward and reverse reads together to obtain the full denoised sequences. Merging is performed by aligning the denoised forward reads with the reverse-complement of the corresponding denoised reverse reads, and then constructing the merged “contig” sequences. By default, merged sequences are only output if the forward and reverse reads overlap by at least 12 bases, and are identical to each other in the overlap region (but these conditions can be changed via function arguments). (In this case this does not apply since we are working with Forward and Reverse separately)
+We trimmed and denoised forward and reverse sequences separately. 
 
 We can now construct an Amplicon Sequence Variant(ASV) table.
 
