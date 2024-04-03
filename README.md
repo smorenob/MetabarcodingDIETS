@@ -1,8 +1,8 @@
 # MetabarcodingDIETS
  
-This workflow is specific to analysing eukaryote diversity from community DNA metabarcoding of gut contents from different species at zoantharian dominated habitats using CO1 gene region from raw reads. It reproduces the cleaning and curation steps as well as the biostatiscal analysis included in the project "Trophic interactions  in habitats dominated by zoantharians in subtropical regions" by Moreno-Borges et al. 2023.  
+This workflow is specific to analysing eukaryote diversity from community DNA metabarcoding of gut contents from different species at zoantharian dominated habitats using CO1 gene region from raw reads. It reproduces the cleaning and curation steps as well as the biostatiscal analysis included in the project "Trophic interactions  in habitats dominated by zoantharians in subtropical regions" by Moreno-Borges et al. 2023. Full study can be found at: https://doi.org/10.1007/s00227-024-04420-7.   
 
-Sample preparation, DNA extraction and PCR amplification steps related to this work can be found here (add link).
+Sample preparation, DNA extraction and PCR amplification steps related to this work can be found here (https://doi.org/10.1007/s00227-024-04420-7).
 
 The scripts are designed to be run using a Linux OS, and were developed on Ubuntu 16.04. 
 #insert line
